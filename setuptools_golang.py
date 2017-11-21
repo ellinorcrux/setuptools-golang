@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import stat
 
 from setuptools.command.build_ext import build_ext as _build_ext
 
@@ -19,7 +20,10 @@ def _tmpdir():
     try:
         yield tempdir
     finally:
-        shutil.rmtree(tempdir)
+        def del_with_escalation(action, name, exc):
+            os.chmod(name, stat.S_IWRITE)
+            os.remove(name)
+        shutil.rmtree(tempdir, onerror=del_with_escalation)
 
 
 def _get_cflags(compiler):
@@ -63,6 +67,7 @@ def _check_call(cmd, cwd, env):
         '$ {}'.format(' '.join(envparts + [pipes.quote(p) for p in cmd])),
         file=sys.stderr,
     )
+    env = {key.encode("utf-8", "ignore"): value.encode("utf-8", "ignore") for key, value in env.items()}
     subprocess.check_call(cmd, cwd=cwd, env=dict(os.environ, **env))
 
 
