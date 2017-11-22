@@ -10,7 +10,9 @@ import subprocess
 import sys
 import tempfile
 import stat
+import platform
 
+from distutils.sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext as _build_ext
 
 
@@ -32,7 +34,9 @@ def _get_cflags(compiler):
 
 LFLAG_CLANG = '-Wl,-undefined,dynamic_lookup'
 LFLAG_GCC = '-Wl,--unresolved-symbols=ignore-all'
-LFLAGS = (LFLAG_CLANG, LFLAG_GCC)
+LFLAG_WINDOWS = '-L{bin_dir}\libs -lpython{lib_version} '.format(bin_dir=get_config_var("BINDIR"),
+                                                               lib_version=get_config_var("VERSION"))
+LFLAGS = (LFLAG_CLANG, LFLAG_GCC, LFLAG_WINDOWS)
 
 
 def _get_ldflags():
@@ -45,6 +49,9 @@ def _get_ldflags():
         testf = os.path.join(tmpdir, 'test.c')
         with io.open(testf, 'w') as f:
             f.write('int f(int); int main(void) { return f(0); }\n')
+
+        if platform.system() == "Windows":
+            return LFLAG_WINDOWS
 
         for lflag in LFLAGS:  # pragma: no cover (platform specific)
             try:
